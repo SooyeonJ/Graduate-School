@@ -36,7 +36,7 @@
 
 1. LoRa가 IoT에 적합한 이유 8가지
 
-### Ch7. Mobile IP
+#### Ch7. Mobile IP
 
 1. ⭐ IP 변경 시 문제점
 2. ⭐ HA / FA 역할
