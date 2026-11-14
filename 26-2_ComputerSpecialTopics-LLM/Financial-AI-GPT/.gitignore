@@ -1,0 +1,7 @@
+*.pth
+*.pt
+*.zip
+.ipynb_checkpoints/
+__pycache__/
+data/*.txt
+financial_ai_hallucination.txt

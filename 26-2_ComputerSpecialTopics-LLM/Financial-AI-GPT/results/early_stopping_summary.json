@@ -1,0 +1,18 @@
+{
+  "stopped_early": true,
+  "last_epoch": 5,
+  "last_step": 150,
+  "best_epoch": 4,
+  "best_step": 100,
+  "best_logged_training_loss": 2.192910146713257,
+  "best_logged_validation_loss": 2.6830594539642334,
+  "stopped_training_loss": 1.9106463193893433,
+  "stopped_validation_loss": 2.829269587993622,
+  "restored_training_loss": 2.276625156402588,
+  "restored_validation_loss": 2.6830594539642334,
+  "patience_eval_checks": 10,
+  "eval_freq_steps": 5,
+  "min_delta": 0,
+  "max_epochs": 10,
+  "checkpoint_path": "best_gpt_early_stopping.pth"
+}
