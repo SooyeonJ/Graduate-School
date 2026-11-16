@@ -1,64 +1,118 @@
-# Financial AI GPT — 금융 특화 텍스트 기반 GPT 학습 및 과적합 완화
+# Financial AI GPT | 금융 도메인 언어모델 학습 및 과적합 개선
 
-> 금융 AI 관련 텍스트 구성 → GPT 학습 → 과적합 징후 관찰 → Early Stopping 적용 → 검증 손실·생성 결과 비교
+**금융 AI 관련 비정형 텍스트로 GPT 모델을 학습하고, 과적합을 발견해 조기 종료(Early Stopping)와 최적 체크포인트 선택으로 개선한 실험 프로젝트**
 
-대학원 컴퓨터특론(LLM) 수업을 기반으로 진행한 모델 학습·분석 프로젝트. 금융 AI·환각·RAG에 관한 한국어 자료를 선정해 **사전학습되지 않은 GPT 모델**을 훈련한 후, 검증 손실이 상승하는 구간을 관찰하고 Early Stopping과 최적 모델 체크포인트 선택 기능을 적용함.
+대학원 컴퓨터특론(LLM)에서 학습한 Transformer·GPT 구조를 금융 AI 분야의 텍스트에 적용하고, **데이터 구성 → 모델 학습 → 문제 발견 → 개선 실험 → 성능 검증**의 과정을 수행함.
 
-**프로젝트 범위:** 금융 AI·RAG 관련 텍스트를 *학습 데이터*로 사용한 GPT 훈련 실험. 금융 AI 챗봇이나 RAG 검색 시스템을 구현하거나 금융 답변의 환각 감소율을 측정한 프로젝트는 아님.
+## 핵심 성과
 
-## 핵심 결과
-
-| 항목 | Baseline | Early Stopping 적용 |
+| 지표 | 10에포크 고정 학습 | Early Stopping 적용 |
 |---|---:|---:|
-| 훈련 종료 | 10에포크 / Step 315 | **5에포크 / Step 150** |
-| 선택한 모델 | 마지막 모델 | **에포크 4 / Step 100 체크포인트** |
-| 최종·복원 검증 손실 | **4.039** | **2.6831** |
-| 해당 훈련 과정의 최저 검증 손실 | 약 2.683 | **2.6831** |
-| 문장 생성 | 한국어 출력 불완전 | 한국어 출력 불완전 |
+| 학습 종료 | 10에포크 (Step 315) | **5에포크 (Step 150)** |
+| 사용 모델 | 마지막 체크포인트 | **최적 체크포인트 (4에포크·Step 100)** |
+| 선택된 모델의 검증 손실 | **4.039** | **2.6831** |
+| 모델 선택 기준 | 훈련 종료 시점 | **검증 손실 최소값** |
 
-**해석:** 10에포크의 마지막 모델 대비 복원된 최적 모델의 검증 손실은 약 **33.6% 낮았음**. 이는 Baseline에서도 관찰된 최저 검증 손실과 같은 수준이며, 새로운 최고 성능을 달성했다는 의미는 아님. 목적은 **훈련 후반의 성능 저하 방지, 최적 가중치 자동 보존 및 불필요한 에포크 감소**에 있음.
+- **검증 손실 약 33.6% 감소:** 기존 10에포크 최종 모델과 최적 체크포인트 복원 모델의 비교 결과
+- **훈련 에포크 50% 단축:** 고정 10에포크 대신 5에포크에서 조기 종료. GPU 실행 시간이 50% 줄었다는 의미는 아님
+- **모델 선택 자동화:** 검증 손실 개선 여부에 따라 가중치를 저장하고, 학습 종료 후 최적 체크포인트 복원
+- **실험 근거 확보:** Baseline과 개선 실험의 노트북, 95개 평가 기록(기준 64개·개선 31개), CSV·JSON 및 비교 그래프 보존
 
-![기존 학습과 조기 종료의 검증 손실 비교](./results/early_stopping_comparison.png)
+> **성과 해석:** 새로운 최저 검증 손실 기록을 달성한 것은 아님. 기존 학습 과정에서도 최저 손실이 약 2.683으로 관찰됨. 이번 개선의 핵심은 **그 시점의 모델을 자동 보존하고, 후반 과적합에 따른 성능 저하를 피하면서 학습을 종료**한 점.
 
-## 데이터 및 훈련 환경
+![Baseline과 Early Stopping 검증 손실 비교](./results/early_stopping_comparison.png)
 
-| 구분 | 설정 |
+## 프로젝트 배경과 문제 해결 과정
+
+### 1. 금융 AI 텍스트 데이터 구성
+
+금융 분야에서 생성형 AI의 활용과 신뢰성 문제가 중요하다는 점에 착안하여, **금융 AI·환각·검색증강생성(RAG)** 관련 자료를 학습 대상으로 선정함.
+
+- 참고 자료: **금융위원회**의 금융 특화 AI 관련 보도자료, **한국지능정보사회진흥원(NIA)**의 RAG 기술 보고서
+- 학습 데이터 규모: **21,360 bytes / 9,249자 / GPT-2 토큰 18,253개**
+- UTF-8 텍스트 구성 및 학습·검증 데이터 **90:10 분할**
+
+자료의 선택·텍스트 구성과 데이터 크기 및 토큰 수 검증을 수행함. [데이터 출처 및 공개 범위](./data/README.md)
+
+### 2. GPT 모델 학습 및 과적합 발견
+
+수업에서 구현한 GPT 구조를 바탕으로 **사전학습 가중치 없이 모델을 초기화**하여 CUDA 환경에서 10에포크 훈련함.
+
+훈련 후반에 **훈련 손실은 계속 감소하는 반면 검증 손실이 상승**하는 현상을 확인함.
+
+- 4에포크 Step 100: 검증 손실 **약 2.683**
+- 10에포크 Step 315: 훈련 손실 **0.553**, 검증 손실 **4.039**
+
+이를 단순히 학습 횟수를 늘리는 것이 아니라 **검증 성능을 기준으로 모델을 선택해야 하는 문제**로 정의함.
+
+### 3. Early Stopping 적용 및 비교 검증
+
+동일한 GPT 구조와 데이터 조건에서 추가 실험을 진행함.
+
+- 5 optimizer step마다 검증 손실 평가
+- 10회 연속 평가에서 최저 검증 손실이 갱신되지 않으면 훈련 중단
+- 최저 검증 손실 발생 시 체크포인트 저장
+- 중단 후 최적 모델의 가중치를 복원하고 손실 재측정
+- 기존 10에포크 결과와 CSV·그래프로 비교
+
+**결과:** 5에포크 Step 150에서 훈련 종료, 4에포크 Step 100의 체크포인트 복원, 복원 검증 손실 **2.6831** 확인.
+
+[실험 설계 및 수치 해석 자세히 보기](./docs/experiment_method.md)
+
+## 금융권 IT와의 연결
+
+이 프로젝트는 금융 AI 서비스를 완성한 사례보다는, **금융 도메인 데이터와 AI 모델을 다룰 때 요구되는 검증·품질관리 역량을 학습하고 실험한 사례**임.
+
+| 금융권 IT 관점 | 프로젝트에서 수행한 경험 | 활용 가능 방향 |
+|---|---|---|
+| **금융 데이터 활용** | 금융 AI·RAG 관련 공식 문서 선정, 텍스트 구성 및 토큰화 | 금융 비정형 문서의 AI 학습 데이터 준비 |
+| **AI 모델 품질관리** | 학습·검증 손실 분리 측정, 과적합 징후 식별 | 검증 지표 기반 모델 평가 및 배포 전 검토 |
+| **모델 운영 효율성** | Early Stopping과 최적 체크포인트 저장·복원 | 과도한 재학습 방지 및 모델 버전 선택 |
+| **실험 추적성** | 실행 노트북, 로그, CSV·JSON, 시각화 보존 | 모델 실험 결과 기록·재현 및 변경 이력 관리 |
+
+특히 **금융 서비스에서 중요한 AI 출력 신뢰성을 높이려면 학습 손실만이 아니라 검증 성능과 모델 선택 기준을 함께 관리해야 한다는 점**을 확인한 경험. 향후 금융 문서 기반 RAG나 정답 근거 검증으로 확장할 수 있으나, 해당 기능은 이번 프로젝트의 구현 범위에 포함되지 않음.
+
+## 구현 및 검증 결과물
+
+| 항목 | 파일 |
 |---|---|
-| 학습 텍스트 | 금융 AI·환각·검색증강생성(RAG) 관련 한국어 자료 |
-| 데이터 규모 | **21,360 bytes · 9,249자 · GPT-2 토큰 18,253개** |
-| 학습/검증 분할 | 문자 위치 기준 90:10 |
-| 모델 | GPT-2형 Transformer 구성, **무작위 초기화** |
-| 주요 구조 | 12 layers · 12 attention heads · emb_dim 768 · context length 256 |
-| 훈련 | PyTorch · AdamW · learning rate 0.0004 · weight decay 0.1 |
-| 평가 | Cross-Entropy Loss, 5 optimizer steps마다 |
-| Early Stopping | 검증 손실 연속 10회 미개선 시 중단, 최적 상태 복원 |
-| 실행 환경 | Google Colab / CUDA GPU |
+| GPT Baseline 학습·실행 로그 | [01_baseline_gpt_training.ipynb](./notebooks/01_baseline_gpt_training.ipynb) |
+| Early Stopping 구현·실행 로그 | [02_early_stopping.ipynb](./notebooks/02_early_stopping.ipynb) |
+| 전후 손실 비교 그래프 | [early_stopping_comparison.png](./results/early_stopping_comparison.png) |
+| Baseline 손실 데이터 | [baseline_loss_history.csv](./results/baseline_loss_history.csv) |
+| Early Stopping 손실 데이터 | [early_stopping_history.csv](./results/early_stopping_history.csv) |
+| 개선 실험 결과 요약 | [early_stopping_summary.json](./results/early_stopping_summary.json) |
+| 생성 결과 확인 | [generation_samples.md](./results/generation_samples.md) |
+| 방법론·정량 평가 | [experiment_method.md](./docs/experiment_method.md) |
 
-## 코드 및 결과
+## 기술 스택 및 주요 설정
 
-**실행 결과가 포함된 노트북**
-- [01. Baseline: GPT 10에포크 훈련](./notebooks/01_baseline_gpt_training.ipynb)
-- [02. Early Stopping: 과적합 완화 비교](./notebooks/02_early_stopping.ipynb)
+`Python` · `PyTorch` · `Transformer` · `GPT` · `tiktoken` · `CUDA` · `AdamW` · `Matplotlib` · `Pandas`
 
-**실험 결과**
-- [Baseline 손실 그래프](./results/baseline_loss.png)
-- [손실 비교 그래프](./results/early_stopping_comparison.png)
-- [Baseline 학습 기록 CSV](./results/baseline_loss_history.csv)
-- [Early Stopping 평가 기록 CSV](./results/early_stopping_history.csv)
-- [Early Stopping 결과 요약 JSON](./results/early_stopping_summary.json)
-- [생성 텍스트 관찰 결과](./results/generation_samples.md)
-- [실험 설계·결과 해석](./docs/experiment_method.md)
+| 설정 | 값 |
+|---|---|
+| 모델 구조 | GPT-2형 Transformer, **12 layers / 12 heads / emb_dim 768** |
+| Context Length | 256 |
+| 학습 방식 | 무작위 초기화, 다음 토큰 예측 |
+| Optimizer | AdamW (LR 0.0004, Weight Decay 0.1) |
+| Batch Size | 2 |
+| 학습 상한 | 10 Epochs |
+| Early Stopping | Patience 10회, 5 Step 평가 간격 |
+| 실험 환경 | Google Colab / CUDA GPU |
 
-**실행 준비:** [데이터 출처 및 공개 범위](./data/README.md)와 [requirements.txt](./requirements.txt) 참고. 학습 코퍼스는 원문 저작물의 이용조건 때문에 **저장소에 포함하지 않음**. 노트북을 재실행하려면 적법하게 준비한 텍스트 파일을 `financial_ai_hallucination.txt`라는 이름으로 Colab에 업로드해야 하며, 다른 데이터 사용 시 동일한 손실을 재현하지 못할 수 있음.
+**구현 범위 구분:** GPT 아키텍처·기본 학습 함수는 대학원 수업 실습 코드에 기반. 금융 AI 자료 선정 및 데이터 구성, 훈련 실행·분석, Early Stopping·최적 체크포인트 저장 및 복원·결과 비교는 실습 및 추가 실험 범위.
 
-## 수행 범위
+## 실행 방법 및 공개 범위
 
-- **수업 기반 코드:** GPT 아키텍처, Transformer 블록, 데이터 로더, 기본 훈련 루프
-- **실습 수행:** 금융 AI 주제·자료 선정, 데이터 구성, GPU 학습, 손실 및 생성 결과 분석
-- **추가 실험:** 검증 손실 기반 Early Stopping, 최적 체크포인트 저장·복원, Baseline 비교와 실험 기록 CSV/그래프 생성
+1. `requirements.txt`에 기재된 패키지 설치 또는 Google Colab 사용
+2. 이용조건을 준수하여 직접 준비한 UTF-8 학습 텍스트를 `financial_ai_hallucination.txt`로 지정
+3. Baseline 또는 Early Stopping 노트북을 GPU 환경에서 실행
+4. 손실 기록과 검증 그래프 비교
 
-## 한계 및 후속 과제
+학습 텍스트는 원문 저작물의 재배포 제한을 고려해 저장소에 포함하지 않음. 다른 텍스트로 실행하면 동일한 수치가 재현되지 않을 수 있음. [데이터 출처 확인](./data/README.md)
 
-작은 한국어 코퍼스를 활용하여 무작위 초기화 모델을 훈련했으므로 한국어 생성 결과가 불완전함. GPT-2 토크나이저의 한국어 분절, 학습 규모, 프롬프트 언어 등은 가능한 원인이지만 요인별 기여도는 분리 검증하지 않음. 동일 검증 데이터로 체크포인트를 선택했으므로 **독립 테스트셋 성능 개선을 입증한 결과는 아님**.
+## 실험 범위와 다음 개선 과제
 
-향후 독립 테스트셋, 복수 시드, 데이터 확대, 사전학습 모델·한국어 토크나이저 비교를 통한 실험 확장 가능.
+현재 성과는 **검증 손실 기준의 모델 선택·학습 종료 개선**에 해당함. 소규모 한국어 코퍼스와 무작위 초기화 모델의 특성상 생성 문장은 불완전하며, 독립 테스트셋에서의 성능 향상이나 금융 답변의 정확도·환각 감소는 입증하지 않음.
+
+향후 별도 테스트셋, 복수 시드, 한국어 토크나이저·사전학습 모델 비교로 평가 범위 확장 가능.
