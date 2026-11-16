@@ -4,6 +4,6 @@
 
 ## 프로젝트
 
-- [Financial AI GPT — 금융 특화 텍스트 기반 GPT 학습 및 과적합 완화](./Financial-AI-GPT/)
+- [Financial AI GPT — 금융 AI 챗봇 환각·RAG 관련 텍스트 학습 및 과적합 완화](./Financial-AI-GPT/)
 
 수업 제출용 원본과 공개 포트폴리오 파일은 구분하여 관리.
